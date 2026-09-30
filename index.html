@@ -324,7 +324,11 @@
             <div style="font-weight: bold; font-size: 13px; color: #0f172a;">${c.price_man}万円 (${Math.round(c.score_total)} pts)</div>
             <div style="font-size: 11px; color: #475569;">${c.address || ''}</div>
             <div style="font-size: 11px; color: #0284c7; margin-top: 2px;">⛰️ ${c.elevation_m || 0}m elevation</div>
-            <a href="${c.url}" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 11px; color: #4f46e5; text-decoration: underline;">View on SUUMO &rarr;</a>
+            <div style="font-size: 11px; color: ${c.landslide_safe === 1 ? '#059669' : '#e11d48'}; margin-top: 2px; font-weight: 600;">${c.landslide_safe === 1 ? '🛡️ Hazard-Free' : '⚠️ Landslide Risk'}</div>
+            <div style="margin-top: 6px; display: flex; justify-content: space-between; font-size: 11px;">
+              <a href="${c.url}" target="_blank" style="color: #4f46e5; text-decoration: underline;">SUUMO &rarr;</a>
+              <a href="https://disaportal.gsi.go.jp/maps/?ll=${c.lat},${c.lon}&z=16&base=pale&vs=c1j0l0u0t0h0z0" target="_blank" style="color: #0284c7; text-decoration: underline;">Hazard Map &rarr;</a>
+            </div>
           </div>
         `;
         marker.bindPopup(popupContent);
@@ -366,7 +370,18 @@
         // Badges
         let elevBadgeClass = (c.elevation_m || 0) >= 40 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20";
         let hazardBadgeClass = c.landslide_safe === 1 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20";
-        let hazardText = c.landslide_safe === 1 ? "🛡️ Hazard-Free" : "⚠️ Landslide Risk";
+        let hazardText = "🛡️ Hazard-Free";
+        let hazardTooltip = "Verified outside designated MLIT landslide & debris flow zones";
+        if (c.landslide_safe === 0) {
+          hazardText = "⚠️ Landslide Risk";
+          if (c.hazard_types && c.hazard_types.length > 0) {
+            hazardTooltip = "MLIT Hazard Zone: " + c.hazard_types.join(", ");
+          } else if (c.slope_hazard_detail) {
+            hazardTooltip = "Steep terrain alert: " + c.slope_hazard_detail;
+          } else {
+            hazardTooltip = "Designated landslide/slope hazard zone";
+          }
+        }
 
         let rebuildingBadge = c.rebuilding_restricted ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">⚠️ Rebuilding Restricted</span>` : '';
 
@@ -426,7 +441,7 @@
               <!-- Badges row -->
               <div class="flex flex-wrap gap-1.5 mb-2">
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${elevBadgeClass}">⛰️ ${c.elevation_m || 'N/A'}m</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${hazardBadgeClass}">${hazardText}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${hazardBadgeClass}" title="${hazardTooltip}">${hazardText}</span>
                 ${rebuildingBadge}
                 ${viewBadge}
                 ${summerCoolBadge}
@@ -485,7 +500,7 @@
               </div>
 
               <div class="flex items-center space-x-2">
-                <a href="https://disaportal.gsi.go.jp/maps/?ll=${c.lat},${c.lon}&z=16" target="_blank" title="Check GSI Hazard Map Portal" class="text-slate-400 hover:text-cyan-400 p-1">
+                <a href="https://disaportal.gsi.go.jp/maps/?ll=${c.lat},${c.lon}&z=16&base=pale&vs=c1j0l0u0t0h0z0" target="_blank" title="Open GSI Hazard Map (Landslide Layers Active)" class="text-slate-400 hover:text-cyan-400 p-1">
                   <i data-lucide="shield-alert" class="w-4 h-4"></i>
                 </a>
                 <a href="${c.url}" target="_blank" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg flex items-center space-x-1 shadow-md shadow-indigo-600/30">
