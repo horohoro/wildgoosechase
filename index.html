@@ -157,7 +157,7 @@
           <h2 class="text-base font-bold text-white">Geographic Map & Exact Elevation Vantage</h2>
         </div>
         <div class="text-xs text-slate-400 flex items-center space-x-3">
-          <span>Map Layer: <b>GSI Japan (国土地理院) & ESRI</b></span>
+          <span>Map Layer: <b>GSI Japan & ESRI</b></span>
         </div>
       </div>
       <div id="map"></div>
@@ -279,9 +279,9 @@
       gsiPale.addTo(map);
 
       const baseMaps = {
-        "GSI Japan Clean (国土地理院 淡色)": gsiPale,
-        "GSI Japan Topo (国土地理院 標準・等高線)": gsiStd,
-        "GSI Aerial Satellite (写真・航空写真)": gsiPhoto,
+        "GSI Clean Map": gsiPale,
+        "GSI Topo Map": gsiStd,
+        "GSI Aerial Satellite": gsiPhoto,
         "ESRI World Street Map": esriStreet
       };
       L.control.layers(baseMaps).addTo(map);
@@ -326,7 +326,7 @@
             <div style="font-size: 11px; color: #475569;">${c.address || ''}</div>
             <div style="font-size: 11px; color: #0284c7; margin-top: 2px;">⛰️ ${c.elevation_m || 0}m elevation</div>
             <div style="font-size: 11px; margin-top: 2px; font-weight: 600;">
-              ${c.landslide_safe === 1 ? '<span style="color: #059669;">🛡️ Hazard-Free</span>' : (c.hazards && c.hazards.some(h => h.includes('Debris')) && !c.slope_hazard_detail && !c.hazards.some(h => h.includes('Steep')) ? '<span style="color: #d97706;">🌊 Debris Flow Risk</span>' : (c.hazards && c.hazards.some(h => h.includes('Landslide')) ? '<span style="color: #ea580c;">⚠️ Deep Landslide (地すべり)</span>' : '<span style="color: #e11d48;">⚠️ Steep Slope Risk</span>'))}
+              ${c.landslide_safe === 1 ? '<span style="color: #059669;">🛡️ Hazard-Free</span>' : (c.hazards && c.hazards.some(h => h.includes('Debris')) && !c.slope_hazard_detail && !c.hazards.some(h => h.includes('Steep')) ? '<span style="color: #d97706;">🌊 Debris Flow Risk</span>' : (c.hazards && c.hazards.some(h => h.includes('Landslide')) ? '<span style="color: #ea580c;">⚠️ Deep Landslide Risk</span>' : '<span style="color: #e11d48;">⚠️ Steep Slope Risk</span>'))}
             </div>
             <div style="margin-top: 6px; display: flex; justify-content: space-between; font-size: 11px;">
               <a href="${c.url}" target="_blank" style="color: #4f46e5; text-decoration: underline;">SUUMO &rarr;</a>
@@ -389,15 +389,15 @@
           } else if (hasSteep) {
             hazardBadgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
             hazardText = "⚠️ Steep Slope Risk";
-            hazardTooltip = c.slope_hazard_detail ? `Steep Slope: ${c.slope_hazard_detail}` : "Designated Steep Slope Collapse Area (急傾斜地崩壊危険箇所)";
+            hazardTooltip = c.slope_hazard_detail ? `Steep Slope: ${c.slope_hazard_detail}` : "Designated Steep Slope Collapse Warning Area";
           } else if (hasLandslide) {
             hazardBadgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-            hazardText = "⚠️ Deep Landslide (地すべり)";
-            hazardTooltip = "Designated Deep-Seated Landslide Area (地すべり警戒区域 - Mass ground displacement)";
+            hazardText = "⚠️ Deep Landslide Risk";
+            hazardTooltip = "Designated Deep-Seated Landslide Area (Mass Ground Displacement)";
           } else if (hasDebris) {
             hazardBadgeClass = "bg-amber-500/15 text-amber-300 border-amber-500/30";
             hazardText = "🌊 Debris Flow Risk";
-            hazardTooltip = "Designated Debris Flow Warning Area (土石流警戒区域) along mountain stream";
+            hazardTooltip = "Designated Debris Flow Warning Area along mountain stream";
           } else {
             hazardBadgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
             hazardText = "⚠️ Terrain / Slope Risk";
@@ -421,7 +421,7 @@
           feesBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">💰 No Monthly Fees</span>`;
         }
 
-        const livingRoomText = c.living_room_size_j ? `(${c.living_room_size_j}帖)` : '';
+        const livingRoomText = c.living_room_size_j ? `(${c.living_room_size_j}J)` : '';
 
         card.innerHTML = `
           <!-- Photo Header with On-Card Arrows -->
