@@ -326,7 +326,7 @@
             <div style="font-size: 11px; color: #475569;">${c.address || ''}</div>
             <div style="font-size: 11px; color: #0284c7; margin-top: 2px;">⛰️ ${c.elevation_m || 0}m elevation</div>
             <div style="font-size: 11px; margin-top: 2px; font-weight: 600;">
-              ${c.landslide_safe === 1 ? '<span style="color: #059669;">🛡️ Hazard-Free</span>' : (c.hazards && c.hazards.some(h => h.includes('Debris')) && !c.slope_hazard_detail && !c.hazards.some(h => h.includes('Steep')) ? '<span style="color: #d97706;">🌊 Debris Flow Risk</span>' : '<span style="color: #e11d48;">⚠️ Steep Slope / Landslide</span>')}
+              ${c.landslide_safe === 1 ? '<span style="color: #059669;">🛡️ Hazard-Free</span>' : (c.hazards && c.hazards.some(h => h.includes('Debris')) && !c.slope_hazard_detail && !c.hazards.some(h => h.includes('Steep')) ? '<span style="color: #d97706;">🌊 Debris Flow Risk</span>' : (c.hazards && c.hazards.some(h => h.includes('Landslide')) ? '<span style="color: #ea580c;">⚠️ Deep Landslide (地すべり)</span>' : '<span style="color: #e11d48;">⚠️ Steep Slope Risk</span>'))}
             </div>
             <div style="margin-top: 6px; display: flex; justify-content: space-between; font-size: 11px;">
               <a href="${c.url}" target="_blank" style="color: #4f46e5; text-decoration: underline;">SUUMO &rarr;</a>
@@ -392,16 +392,16 @@
             hazardTooltip = c.slope_hazard_detail ? `Steep Slope: ${c.slope_hazard_detail}` : "Designated Steep Slope Collapse Area (急傾斜地崩壊危険箇所)";
           } else if (hasLandslide) {
             hazardBadgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-            hazardText = "⚠️ Landslide Risk";
-            hazardTooltip = "Designated Landslide Warning Area (地すべり警戒区域)";
+            hazardText = "⚠️ Deep Landslide (地すべり)";
+            hazardTooltip = "Designated Deep-Seated Landslide Area (地すべり警戒区域 - Mass ground displacement)";
           } else if (hasDebris) {
             hazardBadgeClass = "bg-amber-500/15 text-amber-300 border-amber-500/30";
             hazardText = "🌊 Debris Flow Risk";
             hazardTooltip = "Designated Debris Flow Warning Area (土石流警戒区域) along mountain stream";
           } else {
             hazardBadgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-            hazardText = "⚠️ Landslide Risk";
-            hazardTooltip = "Designated landslide/slope hazard zone";
+            hazardText = "⚠️ Terrain / Slope Risk";
+            hazardTooltip = "Designated slope/terrain hazard zone";
           }
         }
 
