@@ -207,21 +207,21 @@
   </main>
 
   <!-- Photo Lightbox Modal -->
-  <div id="lightbox" tabindex="-1" onclick="if(event.target === this) closeLightbox()" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4 outline-none">
-    <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white bg-slate-800 hover:bg-slate-700 p-2.5 rounded-full">
+  <div id="lightbox" tabindex="-1" onclick="if(event.target === this) closeLightbox()" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4 outline-none select-none">
+    <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white bg-slate-800 hover:bg-slate-700 p-2.5 rounded-full z-10">
       <i data-lucide="x" class="w-6 h-6"></i>
     </button>
     <div class="relative max-w-4xl max-h-[85vh] flex items-center justify-center">
-      <img id="lightbox-img" src="" class="max-w-full max-h-[80vh] rounded-xl object-contain shadow-2xl">
-      <button onclick="prevPhoto()" class="absolute left-2 bg-slate-900/80 hover:bg-slate-800 text-white p-3 rounded-full">
+      <img id="lightbox-img" src="" class="max-w-full max-h-[80vh] rounded-xl object-contain shadow-2xl select-none" draggable="false">
+      <button onclick="prevPhoto()" class="absolute left-2 bg-slate-900/80 hover:bg-slate-800 text-white p-3 rounded-full z-10">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
-      <button onclick="nextPhoto()" class="absolute right-2 bg-slate-900/80 hover:bg-slate-800 text-white p-3 rounded-full">
+      <button onclick="nextPhoto()" class="absolute right-2 bg-slate-900/80 hover:bg-slate-800 text-white p-3 rounded-full z-10">
         <i data-lucide="chevron-right" class="w-6 h-6"></i>
       </button>
     </div>
-    <p id="lightbox-caption" class="text-sm text-slate-300 mt-4 text-center"></p>
-    <p class="text-xs text-slate-500 mt-1">Keyboard: Use Left/Right Arrow keys to browse, Esc to close</p>
+    <p id="lightbox-caption" class="text-sm text-slate-300 mt-4 text-center px-4 font-medium"></p>
+    <p class="text-xs text-slate-400 mt-1 text-center px-4">Swipe or arrow keys to browse · Swipe back, down, or Esc to close</p>
   </div>
 
   <!-- Floating Jump to Map Button -->
@@ -245,6 +245,7 @@
     let activePhotos = [];
     let activePhotoIdx = 0;
     let activeTitle = "";
+    let lightboxOpen = false;
 
     function getStoredStatus(id, defaultStatus) {
       return localStorage.getItem('status_' + id) || defaultStatus || 'discovered';
@@ -668,7 +669,7 @@
       updateMapMarkers(currentFiltered);
     }
 
-    // Lightbox functions with Keyboard Navigation
+    // Lightbox functions with Keyboard Navigation & History-Aware Mobile Back
     function openLightbox(id) {
       const c = RAW_CANDIDATES.find(x => x.id === id);
       if (!c) return;
@@ -686,23 +687,69 @@
       if (map && map.keyboard) {
         map.keyboard.disable();
       }
+
+      if (!lightboxOpen) {
+        lightboxOpen = true;
+        try {
+          history.pushState({ modal: 'lightbox', id: id }, '', window.location.href);
+        } catch (err) {
+          console.warn('history.pushState not available:', err);
+        }
+      }
     }
-    function closeLightbox() {
+
+    function closeLightbox(fromHistory = false) {
+      if (!lightboxOpen) {
+        const lb = document.getElementById('lightbox');
+        if (lb && !lb.classList.contains('hidden')) {
+          lb.classList.add('hidden');
+        }
+        return;
+      }
+      lightboxOpen = false;
       const lb = document.getElementById('lightbox');
-      lb.classList.add('hidden');
+      if (lb) lb.classList.add('hidden');
       if (map && map.keyboard) {
         map.keyboard.enable();
       }
+
+      // Revert history state if user closed manually (not via popstate)
+      if (!fromHistory) {
+        try {
+          if (history.state && history.state.modal === 'lightbox') {
+            history.back();
+          }
+        } catch (err) {
+          console.warn('history.back error:', err);
+        }
+      }
     }
+
+    // Intercept mobile back gestures and browser Back button to close lightbox
+    window.addEventListener('popstate', (e) => {
+      if (lightboxOpen) {
+        closeLightbox(true);
+      }
+    });
+
     function updateLightboxPhoto() {
-      document.getElementById('lightbox-img').src = activePhotos[activePhotoIdx];
-      document.getElementById('lightbox-caption').innerText = `${activeTitle} (${activePhotoIdx + 1} / ${activePhotos.length})`;
+      const img = document.getElementById('lightbox-img');
+      if (img) {
+        img.src = activePhotos[activePhotoIdx];
+        img.style.transform = '';
+      }
+      const cap = document.getElementById('lightbox-caption');
+      if (cap) {
+        cap.innerText = `${activeTitle} (${activePhotoIdx + 1} / ${activePhotos.length})`;
+      }
     }
+
     function nextPhoto() {
       if (activePhotos.length <= 1) return;
       activePhotoIdx = (activePhotoIdx + 1) % activePhotos.length;
       updateLightboxPhoto();
     }
+
     function prevPhoto() {
       if (activePhotos.length <= 1) return;
       activePhotoIdx = (activePhotoIdx - 1 + activePhotos.length) % activePhotos.length;
@@ -728,6 +775,98 @@
         }
       }
     }, true);
+
+    // Mobile Touch Gesture Support for Lightbox (Swipe to browse & Swipe down/back to close)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let isSwiping = false;
+
+    function initLightboxTouchGestures() {
+      const lb = document.getElementById('lightbox');
+      const lbImg = document.getElementById('lightbox-img');
+      if (!lb || !lbImg) return;
+
+      lb.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) {
+          isSwiping = false;
+          return;
+        }
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        isSwiping = true;
+        lbImg.style.transition = 'none';
+      }, { passive: true });
+
+      lb.addEventListener('touchmove', (e) => {
+        if (!isSwiping || e.touches.length !== 1) return;
+
+        // If swipe starts within 25px of the left edge, let the browser/OS handle the native edge back gesture
+        if (touchStartX < 25) return;
+
+        const curX = e.touches[0].clientX;
+        const curY = e.touches[0].clientY;
+        const diffX = curX - touchStartX;
+        const diffY = curY - touchStartY;
+
+        // If horizontal movement is dominant, provide live drag feedback and prevent window scrolling
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          if (e.cancelable) e.preventDefault();
+          if (activePhotos.length > 1) {
+            lbImg.style.transform = `translateX(${diffX * 0.7}px)`;
+          }
+        } else if (diffY > 10 && diffY > Math.abs(diffX)) {
+          // Dragging downwards (visual feedback for swipe-down to dismiss)
+          if (e.cancelable) e.preventDefault();
+          const scale = Math.max(0.82, 1 - diffY / 900);
+          lbImg.style.transform = `translateY(${diffY * 0.6}px) scale(${scale})`;
+        }
+      }, { passive: false });
+
+      lb.addEventListener('touchend', (e) => {
+        if (!isSwiping) return;
+        isSwiping = false;
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        const duration = Date.now() - touchStartTime;
+
+        lbImg.style.transition = 'transform 0.2s ease-out';
+        lbImg.style.transform = '';
+
+        // If edge swipe flick on devices without native popstate gesture
+        if (touchStartX < 35 && diffX > 60) {
+          closeLightbox();
+          return;
+        }
+
+        // Swipe down to dismiss
+        if (diffY > 80 && diffY > Math.abs(diffX) * 1.3 && duration < 600) {
+          closeLightbox();
+          return;
+        }
+
+        // Horizontal swipe to cycle images
+        const threshold = 40;
+        const isQuickFlick = duration < 350 && Math.abs(diffX) > 25;
+        if ((Math.abs(diffX) > threshold || isQuickFlick) && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
+          if (diffX < 0) {
+            nextPhoto();
+          } else {
+            prevPhoto();
+          }
+        }
+      }, { passive: true });
+
+      lb.addEventListener('touchcancel', () => {
+        isSwiping = false;
+        lbImg.style.transition = 'transform 0.2s ease-out';
+        lbImg.style.transform = '';
+      }, { passive: true });
+    }
 
     // Smooth scrolling & two-way navigation helpers
     function scrollToMap() {
@@ -811,6 +950,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       initMap();
       lucide.createIcons();
+      initLightboxTouchGestures();
 
       document.getElementById('filter-view').addEventListener('change', applyFilters);
       document.getElementById('filter-elevation').addEventListener('change', applyFilters);
