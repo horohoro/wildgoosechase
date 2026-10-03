@@ -207,7 +207,7 @@
   </main>
 
   <!-- Photo Lightbox Modal -->
-  <div id="lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4">
+  <div id="lightbox" tabindex="-1" onclick="if(event.target === this) closeLightbox()" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4 outline-none">
     <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white bg-slate-800 hover:bg-slate-700 p-2.5 rounded-full">
       <i data-lucide="x" class="w-6 h-6"></i>
     </button>
@@ -280,7 +280,7 @@
 
     // Init Map using GSI Japan and ESRI (No API keys, No Referer Blocks, file:/// supported)
     function initMap() {
-      map = L.map('map').setView([35.25, 139.3], 9);
+      map = L.map('map', { keyboard: false }).setView([35.25, 139.3], 9);
       
       const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院 (GSI Japan)</a>',
@@ -677,10 +677,22 @@
       activePhotoIdx = cardPhotoIndices[id] || 0;
       activeTitle = c.title || '';
       updateLightboxPhoto();
-      document.getElementById('lightbox').classList.remove('hidden');
+      const lb = document.getElementById('lightbox');
+      lb.classList.remove('hidden');
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+      lb.focus();
+      if (map && map.keyboard) {
+        map.keyboard.disable();
+      }
     }
     function closeLightbox() {
-      document.getElementById('lightbox').classList.add('hidden');
+      const lb = document.getElementById('lightbox');
+      lb.classList.add('hidden');
+      if (map && map.keyboard) {
+        map.keyboard.enable();
+      }
     }
     function updateLightboxPhoto() {
       document.getElementById('lightbox-img').src = activePhotos[activePhotoIdx];
@@ -697,19 +709,25 @@
       updateLightboxPhoto();
     }
 
-    // Keyboard Navigation for Lightbox
+    // Keyboard Navigation for Lightbox (use capture phase to intercept before map or page handlers)
     window.addEventListener('keydown', (e) => {
       const lightbox = document.getElementById('lightbox');
-      if (!lightbox.classList.contains('hidden')) {
+      if (lightbox && !lightbox.classList.contains('hidden')) {
         if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          e.stopPropagation();
           nextPhoto();
         } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          e.stopPropagation();
           prevPhoto();
         } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
           closeLightbox();
         }
       }
-    });
+    }, true);
 
     // Smooth scrolling & two-way navigation helpers
     function scrollToMap() {
